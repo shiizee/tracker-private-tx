@@ -1,4 +1,5 @@
 require('dotenv').config();
+const fs = require('fs').promises;
 const { ethers, WebSocketProvider, Contract, isAddress, MaxInt256, getAddress, Interface } = require('ethers');
 
 const provider = new WebSocketProvider('ws://127.0.0.1:8546');
@@ -11,6 +12,57 @@ let ownersToken = new Map(); // owner, tokenAddress
 let tokenOwners = new Map(); // tokenAddress, [owners];
 let owners = new Set(); // owners / deployers
 let foundTxs = new Set(); // txHashes
+
+const OWNERS_TOKEN_PATH = './db/ownersToken.json';
+const TOKEN_OWNERS_PATH = './db/tokenOwners.json';
+const OWNERS_PATH = './db/owners.json';
+const FOUND_TXS_PATH = './db/foundTxs.json';
+
+async function initialiseData() {
+  try {
+    // Attempt to read the data from the JSON files
+    const ownersTokenData = JSON.parse(await fs.readFile(OWNERS_TOKEN_PATH, 'utf8'));
+    const tokenOwnersData = JSON.parse(await fs.readFile(TOKEN_OWNERS_PATH, 'utf8'));
+    const ownersData = JSON.parse(await fs.readFile(OWNERS_PATH, 'utf8'));
+    const foundTxsData = JSON.parse(await fs.readFile(FOUND_TXS_PATH, 'utf8'));
+
+    // Initialize the maps and sets with the data
+    ownersToken = new Map(Object.entries(ownersTokenData));
+    tokenOwners = new Map(Object.entries(tokenOwnersData));
+    owners = new Set(ownersData);
+    foundTxs = new Set(foundTxsData);
+  } catch (error) {
+    // If the files don't exist, initialize empty maps and sets
+    if (error.code === 'ENOENT') {
+      ownersToken = new Map();
+      tokenOwners = new Map();
+      owners = new Set();
+      foundTxs = new Set();
+    } else {
+      // If there's another error, log it
+      console.error("Error initializing data: ", error);
+    }
+  }
+}
+
+async function saveData() {
+  try {
+    // Convert the maps and sets to arrays or objects for JSON serialization
+    const ownersTokenData = Object.fromEntries(ownersToken);
+    const tokenOwnersData = Object.fromEntries(tokenOwners);
+    const ownersData = Array.from(owners);
+    const foundTxsData = Array.from(foundTxs);
+
+    // Write the data to the JSON files
+    await fs.writeFile(OWNERS_TOKEN_PATH, JSON.stringify(ownersTokenData), 'utf8');
+    await fs.writeFile(TOKEN_OWNERS_PATH, JSON.stringify(tokenOwnersData), 'utf8');
+    await fs.writeFile(OWNERS_PATH, JSON.stringify(ownersData), 'utf8');
+    await fs.writeFile(FOUND_TXS_PATH, JSON.stringify(foundTxsData), 'utf8');
+  } catch (error) {
+    console.error("Error saving data: ", error);
+  }
+}
+
 
 // TODO: TRANSFER OWNERSHIP DETECTION
 
@@ -66,10 +118,7 @@ async function addToken(tokenAddress) {
     ownersToken.set(foundOwner, tokenAddress);
   }
   tokenOwners.set(tokenAddy, foundOwners);
-  // TODO: file saving
-  // save owners
-  // save tokenOwners
-  // save ownersToken
+  saveData();
 }
 
 process.on('addToken', async (tokenAddress) => {
@@ -86,11 +135,8 @@ function removeToken(tokenAddress) {
   }
   tokenOwners.delete(addy);
 
-  // TODO: save the files
+  saveData();
 }
-
-// TODO: save the files
-async function saveFiles() {}
 
 provider.on('pending', async txHash => {
   const tx = await provider.getTransaction(txHash);
@@ -121,5 +167,7 @@ provider.on('block', async blockNumber => {
   }
 })
 
+initialiseData();
+
 // addToken('0x9763C22798784DFda0A09a12fd332CC8B3788496')
-console.log('Bot started at:', Date.now().toString());
+console.log('Bot started at:', (new Date()).toString());
