@@ -1,6 +1,10 @@
 require('dotenv').config();
 const fs = require('fs').promises;
-const { ethers, WebSocketProvider, Contract, isAddress, MaxInt256, getAddress, Interface } = require('ethers');
+const { ethers, WebSocketProvider, Contract, isAddress, MaxInt256, getAddress, Interface, formatEther } = require('ethers');
+const { getEmbeddedLink, getMono, escapeMarkdownV2, 
+  escapeMarkdown } = require('./src/tgBot/tgHelper');
+const { getContractDetails } = require('./src/erc20Getter');
+const { textHelper } = require('./src/textHelper');
 
 const provider = new WebSocketProvider('ws://127.0.0.1:8546');
 const baseTgBot = require('./src/tgBot/baseTgBot');
@@ -113,7 +117,7 @@ async function addToken(tokenAddress, msgId) {
 
   if (foundOwners.length == 0) return;
   foundOwners = foundOwners.map(addy => addy.toLowerCase());
-  foundOwners.push(msgId);
+  // foundOwners.push(msgId);
   for (const foundOwner of foundOwners) {
     owners.add(foundOwner);
     ownersToken.set(foundOwner, tokenAddress);
@@ -122,9 +126,9 @@ async function addToken(tokenAddress, msgId) {
   saveData();
 }
 
-process.on('addToken', async (tokenAddress, msgId) => {
-  console.log('new token detected: ', tokenAddress);
-  addToken(tokenAddress, msgId);
+process.on('addToken', async (info = { tokenAddress, msgId }) => {
+  if (!isAddress(info.tokenAddress)) return;
+  addToken(info.tokenAddress, info.msgId);
 })
 
 function removeToken(tokenAddress) {
@@ -160,7 +164,8 @@ provider.on('block', async blockNumber => {
       if (foundTxs.has(tx.hash)) { // found in mempool first
         // console.log('is public', token);
       } else { // private
-        baseTgBot.sendMessage(process.env.CHAT_GRP, ownersToken.get(txFrom));
+        const addy = getAddress(token);
+        sendTokenMessage(addy, txFrom);
       }
       // delete the token info after 1 tx
       foundTxs.delete(tx.hash);
@@ -168,6 +173,17 @@ provider.on('block', async blockNumber => {
     }
   }
 })
+
+async function sendTokenMessage(token, owner) {
+  const addy = getAddress(token);
+  const [symbol, name, owner2] = await getContractDetails(addy);
+  let ownerBal = formatEther(await provider.getBalance(owner))
+  ownerBal = textHelper.nFormatter(ownerBal, 2);
+  let msg = getEmbeddedLink(`${symbol} | ${name}`, textHelper.getTokenLink(addy)) +
+  `\n${getMono(`    ${addy}`)}\n` + 
+  getEmbeddedLink(`owner: ${ownerBal}`, textHelper.getWalletLink(owner)) + `\n`+ getMono(`    ${owner}`);
+  baseTgBot.sendMessage(process.env.CHAT_GRP, escapeMarkdownV2(msg));
+}
 
 initialiseData();
 

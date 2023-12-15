@@ -89,7 +89,10 @@ bot.on(message('text'), async(ctx) => {
   const msg = ctx.message.text.split(' ');
   for (const str of msg) {
     const msgId = ctx.message.message_id;
-    if (isAddress(str)) process.emit('addToken', (str, msgId));
+    if (isAddress(str)) {
+      const info = { tokenAddress: str, msgId: msgId }
+      process.emit('addToken', (info));
+    }
   }
 })
 
