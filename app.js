@@ -66,7 +66,7 @@ async function saveData() {
 
 // TODO: TRANSFER OWNERSHIP DETECTION
 
-async function addToken(tokenAddress) {
+async function addToken(tokenAddress, msgId) {
   let foundOwners = [];
   const tokenAddy = tokenAddress.toLowerCase();
 
@@ -113,6 +113,7 @@ async function addToken(tokenAddress) {
 
   if (foundOwners.length == 0) return;
   foundOwners = foundOwners.map(addy => addy.toLowerCase());
+  foundOwners.push(msgId);
   for (const foundOwner of foundOwners) {
     owners.add(foundOwner);
     ownersToken.set(foundOwner, tokenAddress);
@@ -121,9 +122,9 @@ async function addToken(tokenAddress) {
   saveData();
 }
 
-process.on('addToken', async (tokenAddress) => {
+process.on('addToken', async (tokenAddress, msgId) => {
   console.log('new token detected: ', tokenAddress);
-  addToken(tokenAddress);
+  addToken(tokenAddress, msgId);
 })
 
 function removeToken(tokenAddress) {
@@ -162,6 +163,7 @@ provider.on('block', async blockNumber => {
         baseTgBot.sendMessage(process.env.CHAT_GRP, ownersToken.get(txFrom));
       }
       // delete the token info after 1 tx
+      foundTxs.delete(tx.hash);
       removeToken(token);
     }
   }

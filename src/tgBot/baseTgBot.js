@@ -88,7 +88,8 @@ bot.on(message('text'), async(ctx) => {
   if (ctx.message.chat.id != Number(process.env.TOKENS_GRP)) return;
   const msg = ctx.message.text.split(' ');
   for (const str of msg) {
-    if (isAddress(str)) process.emit('addToken', str);
+    const msgId = ctx.message.message_id;
+    if (isAddress(str)) process.emit('addToken', (str, msgId));
   }
 })
 
