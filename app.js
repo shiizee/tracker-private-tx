@@ -123,6 +123,7 @@ async function addToken(tokenAddress, msgId) {
     ownersToken.set(foundOwner, tokenAddress);
   }
   tokenOwners.set(tokenAddy, foundOwners);
+  console.log('new token added:', tokenAddy);
   saveData();
 }
 
