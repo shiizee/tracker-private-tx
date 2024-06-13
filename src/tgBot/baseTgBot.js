@@ -85,15 +85,34 @@ const escapeMarkdown = (str) => {
 };
 
 bot.on(message('text'), async(ctx) => {
-  if (ctx.message.chat.id != Number(process.env.TOKENS_GRP)) return;
-  const msg = ctx.message.text.split(' ');
-  for (const str of msg) {
+  // uncomment to get the chat id
+  // console.log(ctx.message.text); 
+  // console.log(ctx.message.chat.id);
+
+  const ethAddressRegex = /0x[a-fA-F0-9]{40}/i;  // Regex to find Ethereum address anywhere in the text
+  const match = ctx.message.text.match(ethAddressRegex);  // Search for the first Ethereum address in the message
+  if (match) {
+    const tokenAddress = match[0];  // The found Ethereum address
     const msgId = ctx.message.message_id;
-    if (isAddress(str)) {
-      const info = { tokenAddress: str, msgId: msgId }
-      process.emit('addToken', (info));
-    }
+    const info = { tokenAddress: tokenAddress, msgId: msgId }
+    process.emit('addToken', (info));
+    return;
   }
+
+
+  // if (ctx.message.chat.id != Number(process.env.TOKENS_GRP)) return;
+  // console.log(ctx.message.chat.id);
+  // const msg = ctx.message.text.split(' ');
+  // for (const str of msg) {
+  //   const msgId = ctx.message.message_id;
+  //   if (isAddress(str.toString())) {
+  //     const info = { tokenAddress: str, msgId: msgId }
+  //     console.log('bruh');
+  //     console.log(info);
+  //     // process.emit('addToken', (info));
+  //     return;
+  //   }
+  // }
 })
 
 bot.launch();

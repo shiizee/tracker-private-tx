@@ -6,7 +6,7 @@ const { getEmbeddedLink, getMono, escapeMarkdownV2,
 const { getContractDetails } = require('./src/erc20Getter');
 const { textHelper } = require('./src/textHelper');
 
-const provider = new WebSocketProvider('ws://127.0.0.1:8546');
+const provider = new WebSocketProvider(process.env.WS_PROVIDER);
 const baseTgBot = require('./src/tgBot/baseTgBot');
 
 let ownerAbi = ['function owner() public view returns (address)'];
@@ -163,7 +163,8 @@ provider.on('block', async blockNumber => {
       const token = ownersToken.get(txFrom);
       console.log('found tx for', token);
       if (foundTxs.has(tx.hash)) { // found in mempool first
-        // console.log('is public', token);
+        console.log('is public', token);
+        console.log(token);
       } else { // private
         const addy = getAddress(token);
         sendTokenMessage(addy, txFrom);
@@ -188,5 +189,5 @@ async function sendTokenMessage(token, owner) {
 
 initialiseData();
 
-// addToken('0x9763C22798784DFda0A09a12fd332CC8B3788496')
+// addToken('0x3dc7d520fb61835c12150456ee38c9ef305b94cd')
 console.log('Bot started at:', (new Date()).toString());
